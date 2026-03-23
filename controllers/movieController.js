@@ -103,3 +103,66 @@ exports.deleteMovie = async (req, res) => {
     res.status(500).json({ error: 'No se pudo eliminar la película' });
   }
 };
+
+// PATCH /api/movies/:id/rating - Actualiza el rating de una película (0-5)
+exports.updateRating = async (req, res) => {
+  const { id } = req.params;
+  const { rating } = req.body;
+
+  // Validación: rating debe ser un número entero entre 0 y 5
+  if (rating === undefined || rating === null) {
+    return res.status(400).json({ error: 'El rating es requerido' });
+  }
+
+  const ratingNum = Number(rating);
+  if (!Number.isInteger(ratingNum) || ratingNum < 0 || ratingNum > 5) {
+    return res.status(400).json({ error: 'El rating debe ser un número entero entre 0 y 5' });
+  }
+
+  try {
+    // Verificar que la película existe y pertenece al usuario
+    const movie = await prisma.movie.findFirst({
+      where: { id, ownerId: req.user.userId },
+    });
+
+    if (!movie) {
+      return res.status(404).json({ error: 'Película no encontrada' });
+    }
+
+    // Actualizar el rating
+    const updatedMovie = await prisma.movie.update({
+      where: { id },
+      data: { rating: ratingNum },
+    });
+
+    res.json(updatedMovie);
+  } catch (error) {
+    res.status(500).json({ error: 'No se pudo actualizar el rating' });
+  }
+};
+
+// PATCH /api/movies/:id/favorite - Alterna el campo isFavorite
+exports.updateFavorite = async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    // Verificar que la película existe y pertenece al usuario
+    const movie = await prisma.movie.findFirst({
+      where: { id, ownerId: req.user.userId },
+    });
+
+    if (!movie) {
+      return res.status(404).json({ error: 'Película no encontrada' });
+    }
+
+    // Alternar el valor de isFavorite (true ↔ false)
+    const updatedMovie = await prisma.movie.update({
+      where: { id },
+      data: { isFavorite: !movie.isFavorite },
+    });
+
+    res.json(updatedMovie);
+  } catch (error) {
+    res.status(500).json({ error: 'No se pudo actualizar favorito' });
+  }
+};
